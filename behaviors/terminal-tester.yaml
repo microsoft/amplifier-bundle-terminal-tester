@@ -1,0 +1,28 @@
+bundle:
+  name: terminal-tester
+  version: 1.0.0
+  description: |
+    Terminal application testing behavior — adds the terminal_inspector tool and specialist
+    agents for launching, interacting with, and verifying terminal applications.
+    Can be composed into any bundle that needs terminal testing capabilities.
+
+tools:
+  - module: tool-terminal-inspector
+    source: ../modules/tool-terminal-inspector
+    config:
+      session_dir: ~/.amplifier/terminal-sessions
+      session_timeout_minutes: 30
+      default_cols: 120
+      default_rows: 40
+      default_launch_wait: 5.0
+      default_font_size: 14
+
+agents:
+  include:
+    - terminal-tester:terminal-operator
+    - terminal-tester:terminal-visual-tester
+    - terminal-tester:terminal-debugger
+
+context:
+  include:
+    - terminal-tester:context/terminal-awareness.md
