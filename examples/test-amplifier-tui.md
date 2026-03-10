@@ -1,7 +1,7 @@
 # Example: Testing the Amplifier TUI
 
 This example walks through a complete test session for the Amplifier TUI
-(`bkrabach/superpowers-amplifier-tui`). It exercises the core flows:
+(`microsoft/amplifier-tui`). It exercises the core flows:
 launch, chat, sidebar, command palette, slash commands, and session persistence.
 
 ## Prerequisites
@@ -25,7 +25,7 @@ The Amplifier TUI supports `--no-alt-screen` and `--screen-dump-path` for precis
 ```python
 result = terminal_inspector(
     operation="spawn",
-    command="/home/bkrabach/dev/tui/target/release/amplifier "
+    command="./target/release/amplifier "
             "--no-alt-screen --screen-dump-path /tmp/amp-screen.txt",
     mode="dump",
     cols=120,

@@ -1,6 +1,6 @@
 # amplifier-module-tool-terminal-inspector
 
-Terminal application testing tool for [Amplifier](https://github.com/microsoft/semanticworkbench) — dual-mode capture via screen-dump (Ratatui) and PTY/pyte (universal).
+Terminal application testing tool for [Amplifier](https://github.com/microsoft/amplifier) — dual-mode capture via screen-dump (Ratatui) and PTY/pyte (universal).
 
 ## Overview
 
