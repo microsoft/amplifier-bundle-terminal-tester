@@ -49,8 +49,9 @@ meta:
     Slash command testing is a standard operator workflow.
     </commentary>
     </example>
-  model_role: [coding, general]
-  tools: [terminal_inspector]
+
+model_role: [coding, general]
+tools: [terminal_inspector]
 ---
 
 # Terminal Operator

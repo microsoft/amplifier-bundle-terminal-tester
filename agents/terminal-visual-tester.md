@@ -39,8 +39,9 @@ meta:
     Specific size testing is a core visual-tester capability.
     </commentary>
     </example>
-  model_role: [critique, general]
-  tools: [terminal_inspector]
+
+model_role: [critique, general]
+tools: [terminal_inspector]
 ---
 
 # Terminal Visual Tester
