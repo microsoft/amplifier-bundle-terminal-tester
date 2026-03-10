@@ -35,22 +35,15 @@ terminal_inspector(operation="spawn", command="python -m my_textual_app", mode="
 
 ### Installation
 
-**Via CLI (recommended):**
+**Add as an app bundle (recommended):**
 ```bash
-amplifier --app git+https://github.com/microsoft/amplifier-bundle-terminal-tester@main
-```
-
-**In your settings (persistent):**
-```yaml
-bundle:
-  app:
-    - git+https://github.com/microsoft/amplifier-bundle-terminal-tester@main
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-terminal-tester@main#subdirectory=behaviors/terminal-tester.yaml --app
 ```
 
 **Compose into another bundle:**
 ```yaml
 includes:
-  - bundle: git+https://github.com/microsoft/amplifier-bundle-terminal-tester@main
+  - bundle: git+https://github.com/microsoft/amplifier-bundle-terminal-tester@main#subdirectory=behaviors/terminal-tester.yaml
     as: terminal-tester
 ```
 
