@@ -52,6 +52,7 @@ meta:
     </commentary>
     </example>
   model_role: [coding, reasoning, general]
+  tools: [terminal_inspector]
 ---
 
 # Terminal Debugger

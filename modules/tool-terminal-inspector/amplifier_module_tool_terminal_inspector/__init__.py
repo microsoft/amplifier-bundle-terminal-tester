@@ -5,6 +5,9 @@ Provides dual-mode terminal application testing:
 - PTY mode: universal, works with any terminal app via pyte VT100 emulation
 
 Operations: spawn, screenshot, send_keys, send_text, find_text, wait_for_text, resize, close, list
+
+PTY mode and key parsing based on Diego Colombo's amplifier-bundle-tui-tester
+(https://github.com/colombod/amplifier-bundle-tui-tester).
 """
 
 from __future__ import annotations
@@ -93,8 +96,15 @@ class TerminalInspectorTool:
                 "operation": {
                     "type": "string",
                     "enum": [
-                        "spawn", "screenshot", "send_keys", "send_text",
-                        "find_text", "wait_for_text", "resize", "close", "list",
+                        "spawn",
+                        "screenshot",
+                        "send_keys",
+                        "send_text",
+                        "find_text",
+                        "wait_for_text",
+                        "resize",
+                        "close",
+                        "list",
                     ],
                     "description": "Operation to perform",
                 },
@@ -212,14 +222,16 @@ class TerminalInspectorTool:
             launch_wait=inp.get("launch_wait"),
         )
 
-        return _ok({
-            "session_id": session.id,
-            "mode": "dump" if isinstance(session, ScreenDumpSession) else "pty",
-            "command": command,
-            "rows": session.rows,
-            "cols": session.cols,
-            "status": "running" if session.is_alive() else "exited",
-        })
+        return _ok(
+            {
+                "session_id": session.id,
+                "mode": "dump" if isinstance(session, ScreenDumpSession) else "pty",
+                "command": command,
+                "rows": session.rows,
+                "cols": session.cols,
+                "status": "running" if session.is_alive() else "exited",
+            }
+        )
 
     async def _screenshot(self, manager: SessionManager, inp: dict) -> dict[str, Any]:
         session_id = inp.get("session_id")
@@ -269,9 +281,11 @@ class TerminalInspectorTool:
 
         if isinstance(session, ScreenDumpSession):
             import subprocess, time  # noqa: E401
+
             subprocess.run(
                 ["tmux", "send-keys", "-t", session.tmux_session, "-l", text],
-                capture_output=True, check=False,
+                capture_output=True,
+                check=False,
             )
             time.sleep(settle_s)
         else:
@@ -302,7 +316,9 @@ class TerminalInspectorTool:
         text = inp.get("text", "")
         timeout_s = float(inp.get("timeout_s", 10.0))
         poll_s = float(inp.get("poll_s", 0.2))
-        result = manager.wait_for_text(session, text, timeout_s=timeout_s, poll_s=poll_s)
+        result = manager.wait_for_text(
+            session, text, timeout_s=timeout_s, poll_s=poll_s
+        )
         return _ok(result)
 
     def _resize(self, manager: SessionManager, inp: dict) -> dict[str, Any]:
@@ -317,12 +333,14 @@ class TerminalInspectorTool:
         rows = inp.get("rows", old_rows)
         cols = inp.get("cols", old_cols)
         session.resize(rows, cols)
-        return _ok({
-            "status": "resized",
-            "old_size": {"rows": old_rows, "cols": old_cols},
-            "new_size": {"rows": rows, "cols": cols},
-            "alive": session.is_alive(),
-        })
+        return _ok(
+            {
+                "status": "resized",
+                "old_size": {"rows": old_rows, "cols": old_cols},
+                "new_size": {"rows": rows, "cols": cols},
+                "alive": session.is_alive(),
+            }
+        )
 
     async def _close(self, manager: SessionManager, inp: dict) -> dict[str, Any]:
         session_id = inp.get("session_id")
@@ -335,21 +353,23 @@ class TerminalInspectorTool:
 
     def _list(self, manager: SessionManager) -> dict[str, Any]:
         sessions = manager.list_sessions()
-        return _ok({
-            "sessions": [
-                {
-                    "session_id": s.id,
-                    "command": s.command,
-                    "mode": "dump" if isinstance(s, ScreenDumpSession) else "pty",
-                    "status": "running" if s.is_alive() else "exited",
-                    "rows": s.rows,
-                    "cols": s.cols,
-                    "created_at": s.created_at.isoformat(),
-                }
-                for s in sessions
-            ],
-            "count": len(sessions),
-        })
+        return _ok(
+            {
+                "sessions": [
+                    {
+                        "session_id": s.id,
+                        "command": s.command,
+                        "mode": "dump" if isinstance(s, ScreenDumpSession) else "pty",
+                        "status": "running" if s.is_alive() else "exited",
+                        "rows": s.rows,
+                        "cols": s.cols,
+                        "created_at": s.created_at.isoformat(),
+                    }
+                    for s in sessions
+                ],
+                "count": len(sessions),
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
