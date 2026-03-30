@@ -159,6 +159,15 @@ Diego Colombo's excellent [`amplifier-bundle-tui-tester`](https://github.com/col
 - **Screen-dump approach**: Developed during amplifier-tui Phase 6
 - **Bundle structure**: Inspired by [amplifier-bundle-browser-tester](https://github.com/microsoft/amplifier-bundle-browser-tester)
 
+## Getting Help
+
+For troubleshooting terminal capture issues, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+For general Amplifier questions:
+
+- [Amplifier GitHub](https://github.com/microsoft/amplifier)
+- [Amplifier Documentation](https://github.com/microsoft/amplifier/tree/main/docs)
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
