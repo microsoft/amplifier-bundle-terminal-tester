@@ -1,9 +1,9 @@
 bundle:
-  name: terminal-tester
+  name: terminal-tester-behavior
   version: 1.0.0
   description: |
-    Terminal application testing behavior — adds the terminal_inspector tool and specialist
-    agents for launching, interacting with, and verifying terminal applications.
+    The behavior portion of the terminal-tester bundle — adds the terminal_inspector tool
+    and specialist agents for launching, interacting with, and verifying terminal applications.
     Can be composed into any bundle that needs terminal testing capabilities.
 
 tools:
