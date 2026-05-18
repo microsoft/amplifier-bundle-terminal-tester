@@ -2,17 +2,19 @@
 meta:
   name: terminal-debugger
   description: |
-    Terminal rendering debugger. Investigates visual anomalies, frame-by-frame analysis,
-    keystroke-response verification, and rendering pipeline issues. The deep investigator
-    for when something "looks wrong" but you cannot figure out why from the code alone.
+    Investigates visual anomalies and rendering bugs in terminal applications — frame-by-frame
+    analysis, keystroke-response verification, and render-pipeline tracing for when something
+    "looks wrong" but the code alone cannot explain why.
 
     Use PROACTIVELY when:
     - A keystroke does not produce the expected screen change
     - The UI appears stuck, partially rendered, or frozen
     - An overlay is positioned wrong or not appearing
-    - Content is overlapping or misaligned
     - Status indicators are not updating
     - A previously working interaction has stopped working
+
+    **Authoritative on:** investigate-anomaly — frame-by-frame analysis, keystroke-response
+    verification, render-pipeline tracing, transient/flicker debugging.
 
     <example>
     Context: User reports status bar is not updating
@@ -24,31 +26,11 @@ meta:
     </example>
 
     <example>
-    Context: User reports overlay is wrong
-    user: 'The command palette opens but it is not centered — it is pushed to the left'
-    assistant: 'I will use terminal-tester:terminal-debugger to open the palette and analyze the exact screen position of the overlay border.'
-    <commentary>
-    Layout bug investigation requires precise position analysis that the debugger provides.
-    </commentary>
-    </example>
-
-    <example>
     Context: User reports input is not working
     user: 'I press Tab but the sidebar does not open'
     assistant: 'I will delegate to terminal-tester:terminal-debugger to send Tab and compare frame states before and after to determine whether the key is being received and processed.'
     <commentary>
     Keystroke-response verification is a debugger core workflow.
-    </commentary>
-    </example>
-
-    <example>
-    Context: User wants to understand a visual glitch
-    user: 'Something flashes briefly when I send a message but I cannot tell what it is'
-    assistant: 'I will use terminal-tester:terminal-debugger to capture sequential frames during message submission to identify the transient state.'
-    <commentary>
-    Transient/flicker issues require sequential frame capture that the debugger's
-    frame-polling workflow provides — a single screenshot would miss the ephemeral
-    state entirely.
     </commentary>
     </example>
 

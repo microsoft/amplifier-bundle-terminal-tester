@@ -2,16 +2,18 @@
 meta:
   name: terminal-visual-tester
   description: |
-    Terminal visual analysis and responsive testing specialist. Captures screen state at
-    multiple terminal sizes, analyzes layout correctness, identifies alignment and rendering
-    issues, and produces detailed visual quality reports.
+    Validates terminal UI layout and responsive behavior across multiple terminal sizes —
+    captures breakpoint sweeps, detects truncation/overlap/misalignment, and produces
+    before/after visual comparisons.
 
     Use PROACTIVELY when the user needs:
     - Layout verification at different terminal widths (80, 120, 160, 200+ columns)
     - Before/after visual comparison of a code change
-    - Responsive layout testing across a range of sizes in a single session
+    - Responsive layout testing across a range of sizes
     - Detection of visual regressions: truncation, overlap, misalignment
-    - Accessibility review: contrast, readability, element visibility
+
+    **Authoritative on:** layout-and-responsive — multi-size breakpoint sweeps, before/after
+    comparison, visual regression detection, accessibility/readability review.
 
     <example>
     Context: User wants to check responsive layout behavior
@@ -28,15 +30,6 @@ meta:
     assistant: 'I will use terminal-tester:terminal-visual-tester to capture the current state and confirm the overlap is resolved.'
     <commentary>
     Visual verification of a fix requires the visual-tester systematic comparison approach.
-    </commentary>
-    </example>
-
-    <example>
-    Context: User wants to confirm a change looks right
-    user: 'How does the settings panel look at 80 columns narrow mode?'
-    assistant: 'I will use terminal-tester:terminal-visual-tester to resize to 80 columns and capture the settings panel state.'
-    <commentary>
-    Specific size testing is a core visual-tester capability.
     </commentary>
     </example>
 
