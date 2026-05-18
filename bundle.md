@@ -1,7 +1,7 @@
 ---
 bundle:
   name: terminal-tester
-  version: 1.0.0
+  version: 1.0.1
   description: Terminal application testing and inspection using dual-mode capture (screen-dump + PTY/pyte)
 
 includes:

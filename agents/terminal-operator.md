@@ -2,17 +2,17 @@
 meta:
   name: terminal-operator
   description: |
-    Terminal application driver using dual-mode capture (screen-dump + PTY/pyte).
-    Launches TUI and CLI apps, sends keystrokes, captures screen state, and verifies
-    rendered output. Supports both Ratatui apps (via --screen-dump-path) and any
-    terminal application (via PTY emulation).
+    Drives TUI and CLI terminal applications — launches them, sends keystrokes, captures
+    screen state, and verifies rendered output against expected behavior.
 
     Use PROACTIVELY when the user needs to:
     - Launch and interact with a terminal application
     - Test keyboard navigation, menus, overlays, or command palettes
     - Verify that keystrokes produce expected screen changes
     - Run automated test flows against TUI or CLI apps
-    - Inspect what a terminal app actually renders
+
+    **Authoritative on:** drive-and-verify — spawn/send_keys/screenshot/wait_for_text
+    workflows, screen-dump mode (Ratatui), PTY mode (any terminal app), CLI output verification.
 
     <example>
     Context: User needs to test TUI keyboard navigation
@@ -24,29 +24,11 @@ meta:
     </example>
 
     <example>
-    Context: User wants to verify a TUI renders correctly
-    user: 'Check what the settings panel looks like when I open it'
-    assistant: 'I will use terminal-tester:terminal-operator to launch the app, open settings, and capture the screen.'
-    <commentary>
-    Screen capture and verification is the operator core capability.
-    </commentary>
-    </example>
-
-    <example>
     Context: User needs to test a CLI command output
     user: 'Run amplifier doctor and verify all checks pass'
     assistant: 'I will delegate to terminal-tester:terminal-operator to run the command and verify the output.'
     <commentary>
     The operator handles both TUI and CLI testing.
-    </commentary>
-    </example>
-
-    <example>
-    Context: User wants to test inline command behavior
-    user: 'Type /clear in the TUI and verify the conversation clears'
-    assistant: 'I will use terminal-tester:terminal-operator to send the /clear command and capture the before/after states.'
-    <commentary>
-    Slash command testing is a standard operator workflow.
     </commentary>
     </example>
 
