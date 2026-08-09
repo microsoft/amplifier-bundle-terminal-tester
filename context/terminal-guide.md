@@ -4,6 +4,44 @@ This guide is the complete reference for agents using the `terminal_inspector` t
 
 ---
 
+## Section 0: The Load-Bearing Constraint
+
+### The frame counter is the sensor. Screen content is for judgment, never for confirming that a keystroke landed.
+
+This is not a style preference — it follows from what each signal can actually establish. In screen-dump mode, the app writes its render buffer after every `terminal.draw()`, and line 1 of that file is `FRAME <N>`. The counter increments **on every render**. It is the only thing in this bundle that tells you a render *happened*.
+
+Screen content cannot tell you that, and the reason is structural: **a frozen app and a correctly-idle app produce identical captures.** Nothing about the text distinguishes them. Read a screen after sending `{TAB}`, see the sidebar closed, and you have learned nothing about whether the app processed the key — it may have never woken up at all.
+
+### The division of responsibility
+
+| Question | Answer from |
+|---|---|
+| Did the app re-render after my input? | `frame` — **always** (dump mode) |
+| Is the process even alive? | `alive` |
+| What is on screen right now? | `screenshot` → `text` |
+| Does the layout look right — truncation, overlap, alignment? | `screenshot` → `text` / `image_path` |
+| Has the app reached a known state? | `wait_for_text` — never a bare sleep |
+| Did the key do the *right* thing? | `frame` advanced **and** the screen shows the expected change |
+
+That last row is the whole discipline. The frame counter proves the app responded; the screen proves it responded *correctly*. A finding needs both. "Frame advanced but the screen did not change" and "frame never advanced" are different bugs with different owners — the first is a handler that ran and did nothing useful, the second is input never arriving.
+
+### PTY mode: the sensor is unavailable, and that must be stated
+
+In PTY mode there is no render buffer and no counter — `screenshot` returns `frame: -1`. The substitute is comparing screen buffers before and after, and it is a **strictly weaker** guarantee: it cannot distinguish "did not re-render" from "re-rendered identically".
+
+That difference is not a technicality. In dump mode, "the key did nothing" is an observation. In PTY mode, it is an inference. Say which one you have:
+
+- Dump mode: "frame did not advance after `{TAB}` — the app did not re-render."
+- PTY mode: "screen buffer unchanged after `{TAB}` — either the app did not re-render, or it re-rendered identically. Not distinguishable in PTY mode."
+
+Prefer dump mode whenever the app supports `--no-alt-screen` and `--screen-dump-path`. It is not only faster and more exact — it is the mode in which this rule's sensor exists at all.
+
+### The rule, stated as a prohibition
+
+**Never report that an interaction worked, or failed, on the strength of screen content alone.** Gate on the frame advancing (or `wait_for_text` for a known target state), then read the screen to judge what it shows. If you are in PTY mode, the frame-based claim is unavailable — report the weaker claim honestly rather than promoting a buffer diff to a render proof.
+
+---
+
 ## Section 1: Two Capture Modes
 
 ### 1.1 Screen-Dump Mode (preferred for Ratatui/crossterm apps)

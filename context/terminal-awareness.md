@@ -2,6 +2,14 @@
 
 This bundle provides terminal application testing via dual-mode capture: screen-dump (for apps with explicit support) and PTY/pyte emulation (universal fallback).
 
+## The One Rule That Matters
+
+**The frame counter is the sensor. Screen content is for judgment, never for confirming that a keystroke landed.**
+
+In screen-dump mode, `FRAME <N>` increments on every render — it is the only signal that the app actually re-rendered after your input. Screen text cannot tell you that: a frozen app and a correctly-idle app produce identical captures. Gate on the frame advancing, then read the screen to judge what it shows.
+
+In PTY mode the counter is unavailable (`frame` is `-1`). The substitute is a screen-buffer comparison, which is a weaker guarantee — it cannot distinguish "did not re-render" from "re-rendered identically" — and findings from PTY mode should say so.
+
 ## Available Agents
 
 | Agent | Use For | Example Triggers |
