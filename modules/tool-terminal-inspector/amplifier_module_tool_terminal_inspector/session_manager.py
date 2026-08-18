@@ -21,20 +21,36 @@ Otherwise PTY mode.
 from __future__ import annotations
 
 import asyncio
-import fcntl
 import os
-import pty
-import select
 import signal
 import struct
 import subprocess
-import termios
 import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+# fcntl/pty/select/termios are POSIX-only and back PTY mode exclusively (the
+# read loop, the fork, and both resize paths). They are soft-imported for the
+# same reason pyte is below: dump mode does not touch them, so a platform that
+# lacks them should lose PTY mode -- not the whole module.
+#
+# Caught on ImportError rather than gated on sys.platform deliberately. A
+# platform check says "not Windows, proceed" and then still dies on a
+# POSIX-shaped environment that happens to lack these modules (a locked-down
+# container, a restricted embedded runtime). Asking the import whether it
+# worked is the question we actually care about.
+try:
+    import fcntl
+    import pty
+    import select
+    import termios
+
+    _HAS_PTY_SUPPORT = True
+except ImportError:
+    _HAS_PTY_SUPPORT = False
 
 # pyte is required for PTY mode; soft-import so dump mode still works without it
 try:
@@ -525,6 +541,15 @@ class SessionManager:
         if effective_mode == "dump":
             session = await self._spawn_dump(session_id, command, rows, cols, session_dir, wait)
         else:
+            if not _HAS_PTY_SUPPORT:
+                raise RuntimeError(
+                    "PTY mode is unavailable: this platform has no fcntl/pty/select/"
+                    "termios (these are POSIX-only, and absent on native Windows). "
+                    "Dump mode is the other capture mode, but it drives sessions "
+                    "through tmux, which also has no native Windows build -- so "
+                    "terminal-tester has no working capture mode here. On Windows, "
+                    "run it under WSL."
+                )
             if not _HAS_PYTE:
                 raise RuntimeError(
                     "PTY mode requires pyte. Install with: pip install pyte"
