@@ -25,6 +25,7 @@ import os
 import signal
 import struct
 import subprocess
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -51,6 +52,30 @@ try:
     _HAS_PTY_SUPPORT = True
 except ImportError:
     _HAS_PTY_SUPPORT = False
+
+# winpty (pywinpty) backs PTY mode on native Windows via ConPTY. Soft-imported
+# for the same reason as the POSIX block above: its absence should cost PTY
+# mode, not the whole module. The two backends are mutually exclusive in
+# practice (POSIX platforms won't have pywinpty installed and vice versa),
+# but both are probed independently rather than gated on sys.platform, for
+# the same "ask the import, don't guess the platform" reasoning as above.
+try:
+    import winpty
+
+    _HAS_CONPTY = True
+except ImportError:
+    _HAS_CONPTY = False
+
+# Single derived predicate PTY dispatch actually branches on. POSIX is
+# preferred when both are somehow present, since this module was POSIX-first
+# and POSIX behavior must remain byte-identical to before ConPTY support was
+# added. `None` means neither backend is usable on this platform.
+if _HAS_PTY_SUPPORT:
+    _PTY_BACKEND: str | None = "posix"
+elif _HAS_CONPTY:
+    _PTY_BACKEND = "conpty"
+else:
+    _PTY_BACKEND = None
 
 # pyte is required for PTY mode; soft-import so dump mode still works without it
 try:
@@ -295,24 +320,69 @@ class ScreenDumpSession:
                 pass
 
 
+def _conpty_reader_loop(proc: Any, buffer: list[str], lock: threading.Lock) -> None:
+    """Background thread body: continuously drain a ConPTY process's output.
+
+    pywinpty has no select()-equivalent for readiness polling -- proc.read()
+    simply blocks until data or EOF. So instead of the POSIX branch's
+    "poll readiness, then read" loop, a single daemon thread blocks on
+    proc.read() in a loop and appends whatever comes back to a shared list.
+    PTYSession._read_output_conpty() drains that list on a bounded timer;
+    this thread never touches pyte or the session object directly, and never
+    blocks anything but itself.
+    """
+    while True:
+        try:
+            if not proc.isalive():
+                break
+            chunk = proc.read()
+        except Exception:  # noqa: BLE001 -- EOFError and pywinpty's own exception
+            # types both just mean "the process is done producing output";
+            # this thread's only job is to stop cleanly when that happens.
+            break
+        if not chunk:
+            break
+        with lock:
+            buffer.append(chunk)
+
+
 @dataclass
 class PTYSession:
-    """A terminal session via PTY fork + pyte VT100 emulation."""
+    """A terminal session via PTY spawn + pyte VT100 emulation.
+
+    Backed by one of two backends, chosen at spawn time (see `backend`):
+      - "posix": pty.fork() + a raw fd (the original, POSIX-only implementation)
+      - "conpty": winpty.PtyProcess, for native Windows via ConPTY
+
+    `pid`/`fd` are only meaningful for the posix backend. `conpty_proc` and
+    the private `_conpty_*` reader-thread fields are only meaningful for the
+    conpty backend. Both backends share `screen`/`stream` (pyte) and every
+    public method on this class (is_alive/resize/close/send/screenshot/etc).
+    """
 
     id: str
     command: str
     rows: int
     cols: int
-    pid: int
-    fd: int
     screen: Any  # pyte.Screen
     stream: Any  # pyte.Stream
     session_dir: Path
+    pid: int = -1
+    fd: int = -1
+    backend: str = "posix"
+    conpty_proc: Any = None  # winpty.PtyProcess; set only when backend == "conpty"
     created_at: datetime = field(default_factory=datetime.now)
     capture_count: int = 0
     font_size: int = 14
+    # ConPTY reader-thread state (see _conpty_reader_loop / _read_output_conpty).
+    # Unused, and left as None, on the posix backend.
+    _conpty_buffer: Any = field(default=None, repr=False, compare=False)
+    _conpty_lock: Any = field(default=None, repr=False, compare=False)
+    _conpty_reader_thread: Any = field(default=None, repr=False, compare=False)
 
     def is_alive(self) -> bool:
+        if self.backend == "conpty":
+            return bool(self.conpty_proc is not None and self.conpty_proc.isalive())
         try:
             os.kill(self.pid, 0)
             return True
@@ -320,6 +390,8 @@ class PTYSession:
             return False
 
     def _read_output(self, timeout: float = 0.1, max_reads: int = 100) -> bytes:
+        if self.backend == "conpty":
+            return self._read_output_conpty(timeout, max_reads)
         output = bytearray()
         reads = 0
         while reads < max_reads:
@@ -337,6 +409,45 @@ class PTYSession:
                 break
         return bytes(output)
 
+    def _drain_conpty_buffer(self) -> list[str]:
+        """Atomically pop everything the reader thread has accumulated so far."""
+        with self._conpty_lock:
+            if not self._conpty_buffer:
+                return []
+            drained = list(self._conpty_buffer)
+            self._conpty_buffer.clear()
+            return drained
+
+    def _read_output_conpty(self, timeout: float, max_reads: int) -> bytes:
+        """ConPTY read loop: drains the background reader thread's buffer.
+
+        There is no select()-equivalent for a ConPTY handle in pywinpty, so
+        this can't poll readiness per-chunk the way the POSIX branch does.
+        Instead: check the buffer once; if nothing is there yet, wait up to
+        `timeout` seconds (bounded -- never blocks indefinitely) and check
+        once more, then return whatever is available either way. This
+        mirrors the POSIX branch's "select() times out -> stop" behavior
+        with a single wait instead of a per-chunk poll. `max_reads` is
+        accepted for signature parity with the posix branch but the conpty
+        reader thread already batches everything it has read, so there is
+        nothing further to gain from looping past the first successful drain.
+        """
+        del max_reads  # not meaningful for the buffer-draining model above
+        chunks = self._drain_conpty_buffer()
+        if not chunks:
+            time.sleep(timeout)
+            chunks = self._drain_conpty_buffer()
+        text = "".join(chunks)
+        if text:
+            # NOTE: PtyProcess.read() already returns decoded str (unlike
+            # POSIX os.read(), which returns bytes and is decoded explicitly
+            # above) -- `text` here is NOT bytes that need decoding. Feeding
+            # it straight into pyte, and encoding it below only so this
+            # method's return type matches the posix branch's, is correct.
+            # Do NOT call .decode() on anything in this method.
+            self.stream.feed(text)
+        return text.encode("utf-8", errors="replace")
+
     async def pump_output(self, duration: float = 0.5, poll: float = 0.05) -> bytes:
         """Drain PTY output for `duration` seconds to let async TUIs finish rendering."""
         output = bytearray()
@@ -351,7 +462,13 @@ class PTYSession:
 
     async def send(self, data: bytes, wait_ms: int = 150) -> None:
         """Write bytes to the PTY and pump output."""
-        os.write(self.fd, data)
+        if self.backend == "conpty":
+            # PtyProcess.write() takes str, not bytes -- the same str/bytes
+            # asymmetry as the read side (see _read_output_conpty), just in
+            # the opposite direction: decode here instead of encoding.
+            self.conpty_proc.write(data.decode("utf-8", errors="replace"))
+        else:
+            os.write(self.fd, data)
         await asyncio.sleep(wait_ms / 1000.0)
         self._read_output()
 
@@ -427,7 +544,7 @@ class PTYSession:
         image.save(path, "PNG")
 
     def resize(self, rows: int, cols: int) -> None:
-        """Resize the PTY and notify the child via SIGWINCH."""
+        """Resize the PTY and notify the child of the new size."""
         old_display = list(self.screen.display)
         new_screen = pyte.Screen(cols, rows)  # type: ignore[attr-defined]
         new_stream = pyte.Stream(new_screen)  # type: ignore[attr-defined]
@@ -446,12 +563,28 @@ class PTYSession:
         self.rows = rows
         self.cols = cols
         if self.is_alive():
-            winsize = struct.pack("HHHH", rows, cols, 0, 0)
-            fcntl.ioctl(self.fd, termios.TIOCSWINSZ, winsize)
-            os.kill(self.pid, signal.SIGWINCH)
+            if self.backend == "conpty":
+                self.conpty_proc.setwinsize(rows, cols)
+            else:
+                winsize = struct.pack("HHHH", rows, cols, 0, 0)
+                fcntl.ioctl(self.fd, termios.TIOCSWINSZ, winsize)
+                os.kill(self.pid, signal.SIGWINCH)
 
     def close(self) -> None:
-        """Close the PTY fd and terminate the child process."""
+        """Close the session and terminate the child process."""
+        if self.backend == "conpty":
+            # PtyProcess has no separate "close the fd" step -- terminate()
+            # covers what os.close(self.fd) + SIGTERM/SIGKILL do together on
+            # POSIX. force=True mirrors this method's POSIX fallback to
+            # SIGKILL after a graceful-termination window.
+            try:
+                if self.conpty_proc is not None:
+                    self.conpty_proc.terminate(force=True)
+                    self.conpty_proc.close()
+            except Exception:  # noqa: BLE001 -- pywinpty's exception types on an
+                # already-dead process vary by version; closing is best-effort.
+                pass
+            return
         try:
             os.close(self.fd)
         except OSError:
@@ -541,14 +674,17 @@ class SessionManager:
         if effective_mode == "dump":
             session = await self._spawn_dump(session_id, command, rows, cols, session_dir, wait)
         else:
-            if not _HAS_PTY_SUPPORT:
+            if _PTY_BACKEND is None:
                 raise RuntimeError(
-                    "PTY mode is unavailable: this platform has no fcntl/pty/select/"
-                    "termios (these are POSIX-only, and absent on native Windows). "
-                    "Dump mode is the other capture mode, but it drives sessions "
-                    "through tmux, which also has no native Windows build -- so "
-                    "terminal-tester has no working capture mode here. On Windows, "
-                    "run it under WSL."
+                    "PTY mode is unavailable: no usable PTY backend was found on "
+                    "this platform. POSIX platforms need fcntl/pty/select/termios "
+                    "(these should always be present -- a locked-down container or "
+                    "restricted runtime may be missing them). Native Windows needs "
+                    "the winpty package for ConPTY support -- install it with: "
+                    "pip install pywinpty. Dump mode is the other capture mode, but "
+                    "it drives sessions through tmux, which also has no native "
+                    "Windows build -- so terminal-tester has no working capture "
+                    "mode here without one of the above."
                 )
             if not _HAS_PYTE:
                 raise RuntimeError(
@@ -617,6 +753,9 @@ class SessionManager:
         cols: int,
         session_dir: Path,
     ) -> PTYSession:
+        if _PTY_BACKEND == "conpty":
+            return await self._spawn_pty_conpty(session_id, command, rows, cols, session_dir)
+
         spawn_env = os.environ.copy()
         spawn_env["TERM"] = "xterm-256color"
         spawn_env["COLUMNS"] = str(cols)
@@ -654,6 +793,78 @@ class SessionManager:
             return session
 
         raise RuntimeError("Child process failed to exec")  # pragma: no cover
+
+    async def _spawn_pty_conpty(
+        self,
+        session_id: str,
+        command: str,
+        rows: int,
+        cols: int,
+        session_dir: Path,
+    ) -> PTYSession:
+        """Spawn a PTY session via ConPTY (native Windows) using pywinpty.
+
+        Mirrors `_spawn_pty`'s POSIX behavior everywhere the backend allows:
+        the same TERM/COLUMNS/LINES env injection, the same initial pyte
+        screen/stream, the same initial-output pump before returning. What
+        differs is dictated by the backend, not by choice:
+          - the command runs through `cmd.exe /c` instead of `/bin/sh -c`
+          - there is no fork()/fd; PtyProcess.spawn() hands back a process
+            object with no select()-style readiness signal for its output,
+            so a daemon reader thread (started here) continuously drains it
+            into a buffer that PTYSession._read_output_conpty() polls
+        """
+        spawn_env = os.environ.copy()
+        spawn_env["TERM"] = "xterm-256color"
+        spawn_env["COLUMNS"] = str(cols)
+        spawn_env["LINES"] = str(rows)
+
+        screen = pyte.Screen(cols, rows)  # type: ignore[attr-defined]
+        stream = pyte.Stream(screen)  # type: ignore[attr-defined]
+
+        argv = ["cmd.exe", "/c", command]
+        proc = winpty.PtyProcess.spawn(  # type: ignore[union-attr]
+            argv,
+            # Mirrors the POSIX branch, which inherits the current working
+            # directory implicitly via fork() -- there is no fork() here, so
+            # it has to be passed explicitly to get the same behavior.
+            cwd=os.getcwd(),
+            env=spawn_env,
+            dimensions=(rows, cols),
+        )
+
+        # See _conpty_reader_loop's docstring: pywinpty has no select()
+        # equivalent, so a background thread drains proc.read() into this
+        # buffer instead of the read loop polling readiness per-chunk.
+        conpty_buffer: list[str] = []
+        conpty_lock = threading.Lock()
+        reader_thread = threading.Thread(
+            target=_conpty_reader_loop,
+            args=(proc, conpty_buffer, conpty_lock),
+            daemon=True,
+        )
+        reader_thread.start()
+
+        session = PTYSession(
+            id=session_id,
+            command=command,
+            rows=rows,
+            cols=cols,
+            screen=screen,
+            stream=stream,
+            session_dir=session_dir,
+            backend="conpty",
+            conpty_proc=proc,
+            font_size=self.default_font_size,
+        )
+        session._conpty_buffer = conpty_buffer
+        session._conpty_lock = conpty_lock
+        session._conpty_reader_thread = reader_thread
+
+        # Initial output pump (mirrors the POSIX branch above)
+        await asyncio.sleep(0.5)
+        await session.pump_output(duration=0.5)
+        return session
 
     # -- Public API ----------------------------------------------------------
 
