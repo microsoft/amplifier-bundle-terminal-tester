@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shutil
 import signal
 import struct
 import subprocess
@@ -32,6 +33,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+# keys.py is a required sibling module (it has no external deps beyond `re`,
+# so unlike the soft-imports below it is not optional on any platform).
+# `parse_keys` is reused by the dump-mode ConPTY backend's send_keys() to
+# turn a tmux key name back into real terminal bytes -- see
+# _TMUX_NAME_TO_CANONICAL below for why that's a safe, lossless translation.
+from .keys import TMUX_KEY_NAMES, parse_keys
 
 # fcntl/pty/select/termios are POSIX-only and back PTY mode exclusively (the
 # read loop, the fork, and both resize paths). They are soft-imported for the
@@ -76,6 +84,27 @@ elif _HAS_CONPTY:
     _PTY_BACKEND = "conpty"
 else:
     _PTY_BACKEND = None
+
+# tmux backs dump mode's process-host role by default (see ScreenDumpSession
+# and SessionManager._spawn_dump below). tmux is invoked via subprocess, not
+# imported, so there's no "try: import tmux" to hang a soft-import off of the
+# way the blocks above do for pywinpty/pyte/Pillow -- shutil.which() is the
+# equivalent presence probe. As with those probes, this is independent of
+# platform: any box that happens to lack tmux (Windows or otherwise) behaves
+# the same way.
+_HAS_TMUX = shutil.which("tmux") is not None
+
+# Single derived predicate dump-mode dispatch actually branches on -- same
+# shape and reasoning as _PTY_BACKEND above. tmux is preferred when both are
+# somehow present, since dump mode was tmux-first and tmux behavior must
+# remain byte-identical to before ConPTY support was added. `None` means
+# neither backend is usable on this platform.
+if _HAS_TMUX:
+    _DUMP_BACKEND: str | None = "tmux"
+elif _HAS_CONPTY:
+    _DUMP_BACKEND = "conpty"
+else:
+    _DUMP_BACKEND = None
 
 # pyte is required for PTY mode; soft-import so dump mode still works without it
 try:
@@ -226,16 +255,55 @@ def _parse_dump(path: str) -> tuple[int, list[str]]:
 
 
 def _tmux_session_exists(name: str) -> bool:
-    r = subprocess.run(
-        ["tmux", "has-session", "-t", name],
-        capture_output=True,
-        check=False,
-    )
+    """Whether a tmux session named `name` currently exists.
+
+    check=False already makes this tolerant of a *nonzero exit* (no session
+    by that name). But when the tmux binary itself isn't installed at all
+    (every native Windows box, and any POSIX box without it), subprocess.run
+    raises FileNotFoundError before any returncode exists -- and that's not
+    an error condition here: if tmux isn't installed, no tmux session
+    exists, so returning False is the semantically correct answer, not a
+    workaround.
+    """
+    try:
+        r = subprocess.run(
+            ["tmux", "has-session", "-t", name],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return False
     return r.returncode == 0
 
 
 def _run_tmux(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["tmux", *args], capture_output=True, text=True, check=True)
+    try:
+        return subprocess.run(["tmux", *args], capture_output=True, text=True, check=True)
+    except FileNotFoundError as e:
+        # Only the "binary doesn't exist" case is translated -- a tmux
+        # command that ran and failed (check=True raising
+        # CalledProcessError) is a real tmux-level error and must keep
+        # propagating unmodified, not be swallowed here.
+        raise RuntimeError(
+            "tmux is not installed or not on PATH (dump-mode's tmux-backed "
+            "process host requires it). tmux has no native Windows build; "
+            "on native Windows use ConPTY-backed dump mode (requires the "
+            "winpty package) or PTY mode instead."
+        ) from e
+
+
+# Reverse of keys.TMUX_KEY_NAMES: tmux key name -> one canonical {KEY} name
+# that produces it, so the ConPTY dump-mode backend can turn a tmux-style
+# named-key segment (already parsed by keys.parse_keys_for_tmux() before it
+# ever reaches this module) back into real terminal bytes via
+# keys.parse_keys(), instead of hand-rolling a second key table. Several
+# canonical names collide on the same tmux name (e.g. TAB and CTRL+I both
+# map to "Tab"; ENTER/RETURN/CTRL+M all map to "Enter"), but every such
+# collision produces byte-identical output from keys.SPECIAL_KEYS, so
+# picking any one name back out of a collision is safe -- no fidelity is
+# actually lost. Derived mechanically from keys.py's own table at import
+# time, not a second hand-maintained mapping.
+_TMUX_NAME_TO_CANONICAL: dict[str, str] = {tmux_name: canonical for canonical, tmux_name in TMUX_KEY_NAMES.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +313,22 @@ def _run_tmux(*args: str) -> subprocess.CompletedProcess[str]:
 
 @dataclass
 class ScreenDumpSession:
-    """A terminal session driven via tmux + screen-dump file capture."""
+    """A terminal session driven via screen-dump file capture.
+
+    Screen capture itself is backend-agnostic: the app under test writes its
+    own render buffer to `dump_path` via --screen-dump-path, and
+    `_parse_dump()`/`wait_for_dump()`/`screenshot()` just read that file --
+    neither of those needs to know or care which backend is hosting the
+    process. Only process lifecycle (alive check, keystroke delivery,
+    resize, teardown) differs, chosen at spawn time via `backend`:
+      - "tmux": tmux session + send-keys (the original implementation)
+      - "conpty": winpty.PtyProcess, for native Windows where tmux has no
+        build
+
+    `tmux_session` doubles as a plain session-identifier string on the
+    conpty backend (nothing looks it up as an actual tmux session there).
+    `conpty_proc` is only meaningful when backend == "conpty".
+    """
 
     id: str
     command: str
@@ -254,9 +337,13 @@ class ScreenDumpSession:
     tmux_session: str
     dump_path: str
     session_dir: Path
+    backend: str = "tmux"
+    conpty_proc: Any = None  # winpty.PtyProcess; set only when backend == "conpty"
     created_at: datetime = field(default_factory=datetime.now)
 
     def is_alive(self) -> bool:
+        if self.backend == "conpty":
+            return bool(self.conpty_proc is not None and self.conpty_proc.isalive())
         return _tmux_session_exists(self.tmux_session)
 
     def screenshot(self) -> dict[str, Any]:
@@ -278,10 +365,35 @@ class ScreenDumpSession:
         }
 
     def send_keys(self, segments: list[tuple[bool, str]], settle_s: float = 0.15) -> None:
-        """Send keystroke segments via tmux send-keys.
+        """Send keystroke segments to the underlying process.
 
-        segments: list of (is_literal, value) from parse_keys_for_tmux()
+        segments: list of (is_literal, value) from parse_keys_for_tmux() --
+        the tool layer always parses via parse_keys_for_tmux() regardless of
+        backend, so on the conpty branch a non-literal segment's `value` is
+        a tmux key name (e.g. "Enter", "C-k"), not a {KEY} token. That name
+        is translated back to real terminal bytes via _TMUX_NAME_TO_CANONICAL
+        + keys.parse_keys() rather than via tmux itself.
         """
+        if self.backend == "conpty":
+            for is_literal, value in segments:
+                if is_literal:
+                    text = value
+                else:
+                    canonical = _TMUX_NAME_TO_CANONICAL.get(value)
+                    if canonical is not None:
+                        data = parse_keys(f"{{{canonical}}}")
+                    else:
+                        # Unrecognized tmux name -- fall back to sending it
+                        # literally, mirroring parse_keys()'s own
+                        # unknown-key "pass through as text" behavior.
+                        data = value.encode("utf-8")
+                    # PtyProcess.write() takes str, not bytes -- same
+                    # str/bytes asymmetry handled the same way in
+                    # PTYSession.send()'s conpty branch.
+                    text = data.decode("utf-8", errors="replace")
+                self.conpty_proc.write(text)
+            time.sleep(settle_s)
+            return
         for is_literal, value in segments:
             if is_literal:
                 _run_tmux("send-keys", "-t", self.tmux_session, "-l", value)
@@ -300,14 +412,27 @@ class ScreenDumpSession:
         return False
 
     def resize(self, rows: int, cols: int) -> None:
-        """Resize the tmux window (app sees SIGWINCH via tmux)."""
+        """Resize the underlying process's terminal (app sees SIGWINCH-equivalent)."""
         self.rows = rows
         self.cols = cols
+        if self.backend == "conpty":
+            if self.conpty_proc is not None:
+                self.conpty_proc.setwinsize(rows, cols)
+            return
         _run_tmux("resize-window", "-t", self.tmux_session, "-x", str(cols), "-y", str(rows))
 
     def close(self) -> None:
-        """Kill the tmux session and clean up dump files."""
-        if _tmux_session_exists(self.tmux_session):
+        """Kill the underlying process/session and clean up dump files."""
+        if self.backend == "conpty":
+            try:
+                if self.conpty_proc is not None:
+                    self.conpty_proc.terminate(force=True)
+                    self.conpty_proc.close()
+            except Exception:  # noqa: BLE001 -- pywinpty's exception types on an
+                # already-dead process vary by version; closing is best-effort,
+                # same reasoning as PTYSession.close()'s conpty branch.
+                pass
+        elif _tmux_session_exists(self.tmux_session):
             subprocess.run(
                 ["tmux", "kill-session", "-t", self.tmux_session],
                 capture_output=True,
@@ -344,6 +469,33 @@ def _conpty_reader_loop(proc: Any, buffer: list[str], lock: threading.Lock) -> N
             break
         with lock:
             buffer.append(chunk)
+
+
+def _conpty_discard_reader_loop(proc: Any) -> None:
+    """Background thread body: drain a dump-mode ConPTY process's output and discard it.
+
+    Screen-dump mode gets its screen content from the app's own dump file
+    (see _parse_dump/screenshot), never from the process's own stdout -- so
+    unlike PTY mode's _conpty_reader_loop, there is no buffer for this to
+    feed and no pyte stream to keep fed. But the OS-level pipe backing a
+    ConPTY still has to be read from by *someone*, or a chatty app under
+    test can fill the pipe buffer and block on its own writes -- the same
+    backpressure problem _conpty_reader_loop exists to avoid, just with
+    nowhere here to put the output. This thread's only job is to keep that
+    pipe drained so the app under test never blocks on it.
+    """
+    while True:
+        try:
+            if not proc.isalive():
+                break
+            chunk = proc.read()
+        except Exception:  # noqa: BLE001 -- same reasoning as _conpty_reader_loop:
+            # EOFError and pywinpty's own exception types both just mean
+            # "the process is done producing output"; this thread's only
+            # job is to stop cleanly when that happens.
+            break
+        if not chunk:
+            break
 
 
 @dataclass
@@ -672,6 +824,15 @@ class SessionManager:
         effective_mode = self._detect_mode(command, mode)
 
         if effective_mode == "dump":
+            if _DUMP_BACKEND is None:
+                raise RuntimeError(
+                    "Dump mode is unavailable: no usable process-host backend was "
+                    "found on this platform. Dump mode needs either tmux (not "
+                    "found on PATH here) or, on native Windows, the winpty "
+                    "package for ConPTY support -- install it with: "
+                    "pip install pywinpty. PTY mode is the other capture mode "
+                    "and does not need tmux."
+                )
             session = await self._spawn_dump(session_id, command, rows, cols, session_dir, wait)
         else:
             if _PTY_BACKEND is None:
@@ -681,10 +842,9 @@ class SessionManager:
                     "(these should always be present -- a locked-down container or "
                     "restricted runtime may be missing them). Native Windows needs "
                     "the winpty package for ConPTY support -- install it with: "
-                    "pip install pywinpty. Dump mode is the other capture mode, but "
-                    "it drives sessions through tmux, which also has no native "
-                    "Windows build -- so terminal-tester has no working capture "
-                    "mode here without one of the above."
+                    "pip install pywinpty. Dump mode is the other capture mode; it "
+                    "also needs tmux or winpty (the same two backends), so it will "
+                    "be unavailable here too without one of the above."
                 )
             if not _HAS_PYTE:
                 raise RuntimeError(
@@ -704,7 +864,7 @@ class SessionManager:
         session_dir: Path,
         launch_wait: float,
     ) -> ScreenDumpSession:
-        tmux_name = f"terminal-inspector-{session_id}"
+        session_name = f"terminal-inspector-{session_id}"
         dump_path = str(session_dir / "screen.txt")
 
         # If command already specifies --screen-dump-path, use it; otherwise inject
@@ -717,14 +877,20 @@ class SessionManager:
             if len(parts) > 1:
                 dump_path = parts[1].strip().split()[0]
 
+        if _DUMP_BACKEND == "conpty":
+            return await self._spawn_dump_conpty(
+                session_id, session_name, command, rows, cols, session_dir, dump_path, launch_wait
+            )
+
+        # tmux backend (unchanged from the original implementation)
         # Create tmux session
         subprocess.run(
-            ["tmux", "new-session", "-d", "-s", tmux_name, "-x", str(cols), "-y", str(rows)],
+            ["tmux", "new-session", "-d", "-s", session_name, "-x", str(cols), "-y", str(rows)],
             capture_output=True,
             check=True,
         )
         subprocess.run(
-            ["tmux", "send-keys", "-t", tmux_name, command, "Enter"],
+            ["tmux", "send-keys", "-t", session_name, command, "Enter"],
             capture_output=True,
             check=True,
         )
@@ -734,12 +900,78 @@ class SessionManager:
             command=command,
             rows=rows,
             cols=cols,
-            tmux_session=tmux_name,
+            tmux_session=session_name,
             dump_path=dump_path,
             session_dir=session_dir,
         )
 
         # Wait for the dump file to appear (initial render)
+        if launch_wait > 0:
+            session.wait_for_dump(timeout=launch_wait + 5.0)
+
+        return session
+
+    async def _spawn_dump_conpty(
+        self,
+        session_id: str,
+        session_name: str,
+        command: str,
+        rows: int,
+        cols: int,
+        session_dir: Path,
+        dump_path: str,
+        launch_wait: float,
+    ) -> ScreenDumpSession:
+        """Spawn a screen-dump session via ConPTY (native Windows) using pywinpty.
+
+        Capture is unaffected: `command` (with --no-alt-screen
+        --screen-dump-path already appended by the caller, exactly as for
+        the tmux branch) is the same command a tmux-hosted session would
+        run, and the app under test writes its own render buffer to
+        `dump_path` exactly the same way either way -- see the class
+        docstring on ScreenDumpSession. ConPTY only replaces tmux's role as
+        the PROCESS HOST: what starts the command, delivers keystrokes,
+        reports whether it's alive, resizes it, and tears it down (the
+        `backend` branches on ScreenDumpSession).
+
+        Unlike PTY mode's ConPTY spawn, there is no pyte stream to feed and
+        nothing here ever reads process output for content -- but the
+        ConPTY's output pipe still needs draining or a chatty app can block
+        on its own writes, so a background thread (_conpty_discard_reader_loop)
+        does that and throws the output away.
+        """
+        argv = ["cmd.exe", "/c", command]
+        proc = winpty.PtyProcess.spawn(  # type: ignore[union-attr]
+            argv,
+            # Mirrors the PTY-mode conpty spawn: fork() implicitly inherits
+            # cwd on the tmux/posix branches, so it's passed explicitly here.
+            cwd=os.getcwd(),
+            env=os.environ.copy(),
+            dimensions=(rows, cols),
+        )
+
+        reader_thread = threading.Thread(
+            target=_conpty_discard_reader_loop,
+            args=(proc,),
+            daemon=True,
+        )
+        reader_thread.start()
+
+        session = ScreenDumpSession(
+            id=session_id,
+            command=command,
+            rows=rows,
+            cols=cols,
+            tmux_session=session_name,
+            dump_path=dump_path,
+            session_dir=session_dir,
+            backend="conpty",
+            conpty_proc=proc,
+        )
+
+        # Wait for the dump file to appear (initial render) -- identical to
+        # the tmux branch; the app under test writes the file regardless of
+        # which backend is hosting the process.
         if launch_wait > 0:
             session.wait_for_dump(timeout=launch_wait + 5.0)
 
