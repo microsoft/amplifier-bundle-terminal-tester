@@ -12,6 +12,12 @@ license = {text = "MIT"}
 dependencies = [
     "pyte>=0.8",
     "Pillow>=10.0",
+    # Backs both capture modes on native Windows via ConPTY (imported as
+    # `winpty`). Environment-marked so it is installed only on Windows and
+    # is a no-op on POSIX, where fcntl/pty/select/termios + tmux are used
+    # instead. Without this the Windows support added in #12/#13 is present
+    # in code but never reachable from a plain install.
+    "pywinpty>=2.0; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
