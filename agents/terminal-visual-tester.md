@@ -19,18 +19,12 @@ meta:
     Context: User wants to check responsive layout behavior
     user: 'Check how the TUI layout adapts from minimum to maximum width'
     assistant: 'I will delegate to terminal-tester:terminal-visual-tester for a full responsive sweep from 60 to 200 columns.'
-    <commentary>
-    Multi-size visual testing at specific breakpoints is the visual-tester specialty.
-    </commentary>
     </example>
 
     <example>
     Context: User wants to compare before/after a layout fix
     user: 'The sidebar was overlapping the conversation area — I fixed it. Can you verify?'
     assistant: 'I will use terminal-tester:terminal-visual-tester to capture the current state and confirm the overlap is resolved.'
-    <commentary>
-    Visual verification of a fix requires the visual-tester systematic comparison approach.
-    </commentary>
     </example>
 
 model_role: [critique, general]

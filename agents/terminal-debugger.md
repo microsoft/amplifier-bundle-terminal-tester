@@ -20,18 +20,12 @@ meta:
     Context: User reports status bar is not updating
     user: 'The working indicator never clears after a response completes'
     assistant: 'I will delegate to terminal-tester:terminal-debugger to capture frame-by-frame state during a response and identify where the status transition fails.'
-    <commentary>
-    Rendering pipeline debugging requires the debugger systematic frame analysis approach.
-    </commentary>
     </example>
 
     <example>
     Context: User reports input is not working
     user: 'I press Tab but the sidebar does not open'
     assistant: 'I will delegate to terminal-tester:terminal-debugger to send Tab and compare frame states before and after to determine whether the key is being received and processed.'
-    <commentary>
-    Keystroke-response verification is a debugger core workflow.
-    </commentary>
     </example>
 
 model_role: [coding, reasoning, general]

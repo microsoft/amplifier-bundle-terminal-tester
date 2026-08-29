@@ -18,18 +18,12 @@ meta:
     Context: User needs to test TUI keyboard navigation
     user: 'Test that Tab cycles through all sidebar states in the amplifier TUI'
     assistant: 'I will delegate to terminal-tester:terminal-operator to launch the TUI and exercise Tab navigation systematically.'
-    <commentary>
-    Terminal interaction requires the operator agent — it has the tool and the workflow discipline.
-    </commentary>
     </example>
 
     <example>
     Context: User needs to test a CLI command output
     user: 'Run amplifier doctor and verify all checks pass'
     assistant: 'I will delegate to terminal-tester:terminal-operator to run the command and verify the output.'
-    <commentary>
-    The operator handles both TUI and CLI testing.
-    </commentary>
     </example>
 
 model_role: [coding, general]
