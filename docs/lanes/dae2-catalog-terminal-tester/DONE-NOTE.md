@@ -255,9 +255,20 @@ Disposition: **recorded as a known benign warning; deliberately not edited.**
   `description` match under `tests/` is `conftest.py:26`, a stub `def description()` on a fake *tool*
   object, and there are **zero** assertions requiring `<example>` blocks to be present — the
   inverted-test hazard that bit `dot-graph` in this sweep does not exist here.
-- **CI: this repo owns none.** `.github/` does not exist and `git ls-files` matches 0 paths under it.
-  Any check appearing on the PR is org-level (e.g. `license/cla`); its state is quoted in the PR body
-  at push time. Local test results above are local runs, not CI results.
+- **CI: this repo owns none, but the PR does carry one check, and it is green.** `.github/` does not
+  exist and `git ls-files` matches 0 paths under it — so there are **no repo-owned workflows**. PR #16
+  nevertheless carries one **org-level** check, `license/cla`
+  (`microsoft-github-policy-service`), reporting **`conclusion: SUCCESS`, `status: COMPLETED`** at
+  2026-09-07T23:17:35Z, with `mergeable: MERGEABLE`. Stated both ways because "this repo has no CI"
+  alone was wrong about the PR's checks in a sibling lane of this sweep. The `94 passed` figure above
+  is a local run, not a CI result.
+
+## 6a. Census safety (goal's pre-finish gate)
+
+`grep -l /tmp/ ~/.local/share/uv/tools/amplifier/lib/python3.13/site-packages/*.pth` → **no matches**
+(exit 1) across **75** `.pth` files. Nothing was repointed. `amplifier` was never invoked on the host
+with a scratch `AMPLIFIER_HOME`; every measurement here is static file reading, and both
+`validate-agents` runs used the in-session recipes tool against real checkout paths.
 
 ---
 
@@ -313,7 +324,21 @@ a units difference, and it reconciles:
 
 ---
 
-## 10. Evidence index
+## 10. Publication
+
+**PR #16** — <https://github.com/microsoft/amplifier-bundle-terminal-tester/pull/16> — created with
+`gh pr create --draft` and **left as a draft**, because this goal's LANDING STAGE clause makes the
+draft PR the lane's finish line: *"A deliverable whose FINAL state requires a merge is DONE AT THE
+DRAFT PR."* **Not merged, and not marked ready** — that call is the manager's, and the deliberate
+divergence from the ios-tester lane (which had a differently-worded ready-when-green clause) is
+recorded here rather than left as an inconsistency.
+
+Readback at the time of writing: `headRefOid b851e44…` matching `git ls-remote`,
+`isDraft: true`, `state: OPEN`, `mergeable: MERGEABLE`, `license/cla` SUCCESS. The DONE.json marker
+lives outside this repo at the lane root, by instruction; no `DONE.json` is created, staged or
+committed inside this repository.
+
+## 11. Evidence index
 
 ```
 docs/lanes/dae2-catalog-terminal-tester/
