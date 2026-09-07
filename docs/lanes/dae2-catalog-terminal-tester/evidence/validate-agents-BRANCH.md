@@ -69,3 +69,11 @@ android-tester lanes of this sweep recorded. The branch clears every ERROR.
 
 The 3 residual `NO_TOOLS_SECTION` warnings are **identical on stock and branch**
 and were deliberately not touched - see DONE-NOTE §5.
+
+## This is NOT the `PASS` the goal asks for
+
+The goal's deliverable reads *"verdict quoted (must stay PASS)"*. `⚠️ PASS WITH WARNINGS` is a
+different verdict. **That deliverable is recorded NOT-POSSIBLE-with-reason**, not DONE — see
+DONE-NOTE §4a for the deterministic proof (`classify_agent` pins any agent with
+`has_explicit_tools == false` to `needs_work` before it looks at the description at all) and
+`model_performance-593h` for the filed goal defect.

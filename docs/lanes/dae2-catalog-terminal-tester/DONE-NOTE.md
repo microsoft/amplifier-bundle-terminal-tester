@@ -11,11 +11,17 @@ nothing to tear down.
 
 ---
 
-## OUTCOME: branch A — RESOLVED
+## OUTCOME: branch A — RESOLVED, 6 deliverables DONE + 1 NOT-POSSIBLE-with-reason
 
-Every deliverable is **DONE**. Nothing was recorded NOT-POSSIBLE. The $0 authority funded the whole
-job because the job is text edits plus recipe runs, which the goal names as inside it. The cap never
-bound.
+Six of the seven deliverables are **DONE**. **One is NOT-POSSIBLE-with-reason**: the goal asks that
+the branch `validate-agents` verdict be **PASS**, and it is **PASS WITH WARNINGS**. That is not a
+near-miss to be argued around — it is unreachable within this goal's own scope, and §4a proves it
+mechanically. The $0 authority never bound; the cap is not the reason.
+
+> **Correction history.** An earlier revision of this note (and the first resolution text on
+> `model_performance-dae2`) called all seven DONE. That was wrong on the strict reading of *"verdict
+> quoted (must stay PASS)"*, and it is corrected here, in an erratum on the work item, and in the PR
+> body — rather than quietly restated. No measurement changed; only the label on one deliverable.
 
 ---
 
@@ -219,6 +225,57 @@ The branch run's own summary of the residual rating, verbatim:
 > The `needs_work` rating on all three agents traces to a **single warning code repeated three times
 > — `NO_TOOLS_SECTION`**. Zero description defects were found.
 
+## 4a. This deliverable is NOT-POSSIBLE-with-reason, and here is the proof
+
+**Deliverable as written:** *"`validate-agents` recipe run ON THE BRANCH, verdict quoted (must stay
+PASS)"*. **Result: `⚠️ PASS WITH WARNINGS`. That is not `PASS`. The deliverable is NOT MET.**
+
+It is also **not reachable** by any lane bound by this goal's own fidelity gate. The proof is
+deterministic and needs nothing run — `classify_agent`, foundation
+`recipes/validate-agents.yaml:1078-1119`:
+
+```python
+if has_errors:                    quality = "critical"      # -> FAIL
+elif not has_explicit_tools:      quality = "needs_work"    # -> PASS WITH WARNINGS   <-- fires here
+elif description_length < 100:    quality = "needs_work"
+elif description_length > 1200:   quality = "needs_work"
+elif description_length > 600:    quality = "polish"        # -> PASS WITH SUGGESTIONS
+elif has_model_role_errors:       quality = "needs_work"
+elif has_warnings:                quality = "polish"
+else:                             quality = "good"          # -> PASS
+```
+
+Only `good` maps to a bare `PASS`. `has_explicit_tools` is evaluated **second — before any
+description property is looked at**, so a description that is perfect by every criterion in this
+sweep still cannot lift the verdict. On this repo `has_explicit_tools` is `false` for all three
+agents, on stock and on the branch alike.
+
+**The single edit that would reach `PASS` is adding a `tools:` key to the agent frontmatter — which
+is exactly what this same goal forbids:** *"Bodies must be byte-identical to stock … only the
+frontmatter description changes."* Clause 1 and clause 2 are mutually unsatisfiable on this repo. The
+lane cannot satisfy both, and it is not entitled to pick which one to break silently.
+
+**A second, independent defect in the same clause:** *"must **stay** PASS"* presupposes stock was
+PASS. Stock was **FAIL**. Nothing can *stay* a state it was never in.
+
+**Blast radius: sweep-wide.** **0 of 12** agents across the four sibling tester bundles (android,
+browser, terminal, ios) declare agent-level `tools:` — so no description-only lane in this family can
+ever satisfy the clause as written. Two of those four already merged in this sweep, both at PASS WITH
+WARNINGS.
+
+**Filed as `model_performance-593h`** with three remedies: (a) reword the clause to what it actually
+tests — *clears every structural ERROR, with residual warnings shown identical on stock and branch*;
+(b) keep `PASS` and widen the scope to permit `tools:`, which makes it a functional change needing a
+real spawn to verify and therefore not a $0 job; (c) split the `tools:` work into one cross-bundle
+item covering all 12 agents at once. **This lane recommends (a) + (c)** and did **not** take (b): the
+lane will not fold an unverifiable functional change into a text-only diff, nor make this bundle the
+sole outlier among its three siblings, on its own authority.
+
+**What the lane did achieve against this deliverable:** stock's **5 structural ERRORs → 0**, verdict
+quoted verbatim on both sides, discovered agent count quoted (3), residual warnings shown identical
+on stock and branch. If the clause is reworded per (a), this is DONE as it stands, with no further
+edit.
+
 ---
 
 ## 5. `NO_TOOLS_SECTION` × 3: acknowledged and declined, not fixed
@@ -298,7 +355,12 @@ a units difference, and it reconciles:
    `x99c` did when it spawned this item. §10.
 2. **All three land ≤600 chars.** No fidelity trade was needed to get there, so none was taken. Where
    a further trim would have cost a fact, the fact wins — that case did not arise.
-3. **`NO_TOOLS_SECTION` × 3 accepted, not remediated.** §5.
+3. **`NO_TOOLS_SECTION` × 3 accepted, not remediated — and the verdict deliverable recorded
+   NOT-POSSIBLE rather than bought with an out-of-scope edit.** Adding `tools:` is the one edit that
+   would have turned `PASS WITH WARNINGS` into `PASS`; it is forbidden by this goal's own fidelity
+   gate, unverifiable at $0, and would make this bundle the sole outlier among four siblings. The
+   lane took the goal's NOT-POSSIBLE-with-reason branch and filed the conflict as
+   `model_performance-593h`. §4a, §5.
 4. **Two `validate-agents` runs, not one.** The goal requires the branch verdict; the stock run is
    what makes "FAIL → PASS WITH WARNINGS" checkable rather than asserted. Both are $0.
 5. **No catalog render performed.** The goal's deliverable list asks for char counts, not a rendered
@@ -354,4 +416,5 @@ docs/lanes/dae2-catalog-terminal-tester/
     ├── descriptions-BRANCH.json     the same fields on the branch
     ├── validate-agents-STOCK.md     FAIL, 5 errors, verdict + coverage quoted verbatim
     └── validate-agents-BRANCH.md    PASS WITH WARNINGS, 0 errors, verdict + coverage verbatim
+                                     (NOT the required PASS -- see DONE-NOTE section 4a)
 ```
