@@ -310,13 +310,18 @@ a units difference, and it reconciles:
 
 ## 9. Observations worth their own item (found, not fixed)
 
-1. **A claim from the branch run's tool-access analysis is REFUTED, and is recorded rather than
-   propagated.** It asserted that a bare-string `tools: [terminal_inspector]` is *"live today in
+1. **One claim from the branch run's tool-access analysis is REFUTED — recorded, not propagated.** It
+   asserted that a **bare-string** `tools: [terminal_inspector]` is *"live today in
    `reality-check:terminal-tester.md`"* and would `AttributeError` at spawn. Checked directly: that
    file uses the correct mount-plan form (`tools:` → `- module: tool-terminal-inspector`), as does
-   `reality-check:browser-tester.md` (`- module: tool-delegate`). **No such bug exists there.** The
-   underlying shape constraint (mount-plan dicts, not bare strings) is real and worth knowing; the
-   named victim is not. No item filed.
+   `reality-check:browser-tester.md` (`- module: tool-delegate`). **There is no bare-string
+   declaration and no spawn crash there.** The shape constraint itself (mount-plan dicts, not bare
+   strings) is real and worth knowing; the named victim is not.
+   **This does not contradict the separate, real finding already filed by another lane as
+   `model_performance-yd8m`** (*"reality-check: browser-tester loses tool-delegate at spawn;
+   terminal-tester tools declaration is inert"*) — an *inert* declaration is exactly what the
+   additive `_merge_tools` semantics produce for an already-inherited module, which is a different
+   defect from a crash. No new item filed; yd8m covers it.
 2. **`validate-agents` false-negatives on behavior-level tool declarations** — it checks for the
    `tools:` *key in agent frontmatter only*, not validity or location, so a correct
    `behaviors/*.yaml` declaration reads as missing. Same polarity the ios-tester and
