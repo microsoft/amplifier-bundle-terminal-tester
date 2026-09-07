@@ -2,30 +2,14 @@
 meta:
   name: terminal-visual-tester
   description: |
-    Validates terminal UI layout and responsive behavior across multiple terminal sizes —
-    captures breakpoint sweeps, detects truncation/overlap/misalignment, and produces
-    before/after visual comparisons.
-
-    Use PROACTIVELY when the user needs:
-    - Layout verification at different terminal widths (80, 120, 160, 200+ columns)
-    - Before/after visual comparison of a code change
-    - Responsive layout testing across a range of sizes
-    - Detection of visual regressions: truncation, overlap, misalignment
-
-    **Authoritative on:** layout-and-responsive — multi-size breakpoint sweeps, before/after
-    comparison, visual regression detection, accessibility/readability review.
-
-    <example>
-    Context: User wants to check responsive layout behavior
-    user: 'Check how the TUI layout adapts from minimum to maximum width'
-    assistant: 'I will delegate to terminal-tester:terminal-visual-tester for a full responsive sweep from 60 to 200 columns.'
-    </example>
-
-    <example>
-    Context: User wants to compare before/after a layout fix
-    user: 'The sidebar was overlapping the conversation area — I fixed it. Can you verify?'
-    assistant: 'I will use terminal-tester:terminal-visual-tester to capture the current state and confirm the overlap is resolved.'
-    </example>
+    USE WHEN the question about a terminal UI is how it LOOKS or how it reflows: verify
+    layout at different widths (80, 120, 160, 200+ columns); test responsive
+    layout across a range of sizes; compare before/after a code change; detect visual
+    regressions — truncation, overlap, misalignment. Owns layout-and-responsive —
+    multi-size breakpoint sweeps, before/after comparison, visual regression detection,
+    accessibility/readability review. DO NOT USE to drive a flow or verify keystrokes
+    (terminal-operator), to root-cause why an interaction broke (terminal-debugger), or
+    for web, Android or iOS UI.
 
 model_role: [critique, general]
 ---

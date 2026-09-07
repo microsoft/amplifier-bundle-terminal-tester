@@ -2,31 +2,14 @@
 meta:
   name: terminal-debugger
   description: |
-    Investigates visual anomalies and rendering bugs in terminal applications — frame-by-frame
-    analysis, keystroke-response verification, and render-pipeline tracing for when something
-    "looks wrong" but the code alone cannot explain why.
-
-    Use PROACTIVELY when:
-    - A keystroke does not produce the expected screen change
-    - The UI appears stuck, partially rendered, or frozen
-    - An overlay is positioned wrong or not appearing
-    - Status indicators are not updating
-    - A previously working interaction has stopped working
-
-    **Authoritative on:** investigate-anomaly — frame-by-frame analysis, keystroke-response
-    verification, render-pipeline tracing, transient/flicker debugging.
-
-    <example>
-    Context: User reports status bar is not updating
-    user: 'The working indicator never clears after a response completes'
-    assistant: 'I will delegate to terminal-tester:terminal-debugger to capture frame-by-frame state during a response and identify where the status transition fails.'
-    </example>
-
-    <example>
-    Context: User reports input is not working
-    user: 'I press Tab but the sidebar does not open'
-    assistant: 'I will delegate to terminal-tester:terminal-debugger to send Tab and compare frame states before and after to determine whether the key is being received and processed.'
-    </example>
+    USE WHEN a terminal UI "looks wrong" but the code alone cannot explain why: a keystroke
+    does not produce the expected screen change; the UI appears stuck, partially rendered or
+    frozen; an overlay is positioned wrong or missing; a status indicator is not
+    updating; a previously working interaction has stopped. Owns investigate-anomaly
+    — frame-by-frame analysis, keystroke-response verification, render-pipeline tracing,
+    transient/flicker debugging. DO NOT USE to drive a flow or test pass
+    (terminal-operator), to judge layout across sizes (terminal-visual-tester), or
+    for web, Android or iOS UI.
 
 model_role: [coding, reasoning, general]
 ---
