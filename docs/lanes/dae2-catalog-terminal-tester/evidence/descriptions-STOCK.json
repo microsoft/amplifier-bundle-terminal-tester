@@ -1,0 +1,46 @@
+{
+  "terminal-debugger.md": {
+    "desc_chars": 1270,
+    "desc_md5": "a79720a1a33ff84a7c1825a0d9666158",
+    "example_count": 2,
+    "commentary_count": 0,
+    "body_md5": "d9e2ec09970425820980c038aca65214",
+    "body_bytes": 8723,
+    "has_tools": false,
+    "model_role": [
+      "coding",
+      "reasoning",
+      "general"
+    ],
+    "file_bytes": 10180
+  },
+  "terminal-operator.md": {
+    "desc_chars": 1109,
+    "desc_md5": "05a78a669c6994282f6669796d99d6d1",
+    "example_count": 2,
+    "commentary_count": 0,
+    "body_md5": "b5d329d1dd9468326c2012f8ba1fee8f",
+    "body_bytes": 7709,
+    "has_tools": false,
+    "model_role": [
+      "coding",
+      "general"
+    ],
+    "file_bytes": 8986
+  },
+  "terminal-visual-tester.md": {
+    "desc_chars": 1222,
+    "desc_md5": "b4b1578898c4e0ddccc62a737c4a0e0d",
+    "example_count": 2,
+    "commentary_count": 0,
+    "body_md5": "5f2265235a7d2429e5f332efff6bec79",
+    "body_bytes": 6864,
+    "has_tools": false,
+    "model_role": [
+      "critique",
+      "general"
+    ],
+    "file_bytes": 8267
+  },
+  "_total_desc_chars": 3601
+}

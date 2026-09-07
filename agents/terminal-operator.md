@@ -2,29 +2,14 @@
 meta:
   name: terminal-operator
   description: |
-    Drives TUI and CLI terminal applications — launches them, sends keystrokes, captures
-    screen state, and verifies rendered output against expected behavior.
-
-    Use PROACTIVELY when the user needs to:
-    - Launch and interact with a terminal application
-    - Test keyboard navigation, menus, overlays, or command palettes
-    - Verify that keystrokes produce expected screen changes
-    - Run automated test flows against TUI or CLI apps
-
-    **Authoritative on:** drive-and-verify — spawn/send_keys/screenshot/wait_for_text
-    workflows, screen-dump mode (Ratatui), PTY mode (any terminal app), CLI output verification.
-
-    <example>
-    Context: User needs to test TUI keyboard navigation
-    user: 'Test that Tab cycles through all sidebar states in the amplifier TUI'
-    assistant: 'I will delegate to terminal-tester:terminal-operator to launch the TUI and exercise Tab navigation systematically.'
-    </example>
-
-    <example>
-    Context: User needs to test a CLI command output
-    user: 'Run amplifier doctor and verify all checks pass'
-    assistant: 'I will delegate to terminal-tester:terminal-operator to run the command and verify the output.'
-    </example>
+    USE WHEN a TUI or CLI app must be launched and driven: interact with a terminal
+    application; exercise keyboard navigation, menus, overlays or a command palette;
+    verify keystrokes produce the expected screen change; run an automated test
+    flow. Owns drive-and-verify — spawn/send_keys/screenshot/wait_for_text
+    workflows, screen-dump mode (Ratatui), PTY mode (any terminal app), CLI output
+    verification. DO NOT USE to judge how a screen LOOKS or to sweep
+    terminal sizes (terminal-visual-tester), to root-cause why an interaction broke
+    (terminal-debugger), or for web, Android or iOS UI.
 
 model_role: [coding, general]
 ---
