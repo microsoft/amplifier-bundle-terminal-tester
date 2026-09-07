@@ -23,6 +23,54 @@ mechanically. The $0 authority never bound; the cap is not the reason.
 > quoted (must stay PASS)"*, and it is corrected here, in an erratum on the work item, and in the PR
 > body — rather than quietly restated. No measurement changed; only the label on one deliverable.
 
+> **Terminal state was then challenged as branch C (BLOCKED), and the lane HOLDS A. See §0a.**
+
+---
+
+## 0a. The terminal state was challenged as branch C (BLOCKED). The lane holds A.
+
+**The challenge:** *"the work is unreachable for a non-cap reason, so the goal requires the
+BLOCKED.md / commit / `work_release` path; branch A with a NOT-POSSIBLE deliverable is wrong."*
+
+**Partly right, and recorded as such.** Branch C's **condition** does fit — one deliverable is
+unreachable for a reason that is not the cap. Branch A's condition is also imperfect: A reads *"the
+deliverables below exist as a draft PR"*, and one of seven does not. **Both readings are defensible
+against the same text. That is the finding, not a lane's excuse.**
+
+**Why the lane did not take C.** This exact lock is **already filed by a different lane** as
+`model_performance-t7g1`, still OPEN, and its analysis lands verbatim on this point: branch C's
+condition *"FITS"* but its **remedy** collides with the goal's own clauses, because *"work_release
+returns the item to ready, where the next claimant meets the identical [wall] and burns another run.
+C's remedy re-creates the trap."* t7g1 proposes the missing member **D — RESOLVED WITH DELIVERABLES
+UNREACHABLE (non-cap)** — and states plainly that for that state *"BLOCKED.md and work_release are
+WRONG"*. **D's verb is resolve. This lane's end state is D.**
+
+**This case is weaker for C than the one t7g1 adjudicated.** zc6t had **19 of 23** deliverables
+unreachable across 13 unprovisioned repos and still concluded resolve. Here it is **1 of 7**; the one
+is a **validator verdict string**, not a work product; the run did execute on the branch and its
+verdict is quoted on both sides; and the substantive work — three rewritten descriptions, −1,826
+chars, 0 fidelity loss, 5 structural ERRORs cleared — is shipped as draft PR #16.
+
+**What C would cost, concretely.** `work_release` refuses unless the session holds the item, so C now
+requires `work_reopen` first — which **clears `closed_at`**, re-lands the item on the correction date
+and moves every throughput roll-up. It would publish **BLOCKED** over a lane whose work landed
+correctly (risking a good PR going unmerged), and re-queue an item whose one remaining obstacle **no
+lane can clear**, because the obstacle is a clause of the goal (`model_performance-593h`), not a
+property of the code.
+
+**The 1ru guard applies.** *"Choose the terminal state ONCE; if no number changed, no re-decision is
+warranted."* Between the first resolution and this challenge, **no measurement moved**. The first
+erratum was a letter-of-the-goal correction with a checkable basis (PASS vs PASS WITH WARNINGS) and
+was made immediately; this second challenge is interpretive, and t7g1's own finding is that such a
+challenge is **invariant to anything the lane does**.
+
+**Disposition:** terminal state **A / t7g1's D**; deliverables **6 DONE + 1
+NOT-POSSIBLE-with-reason**; the disagreement is recorded in the work item's own errata rather than
+hidden. **The steward can override** — if the manager rules C, the path is `work_reopen` (accepting
+the `closed_at` cost) → `BLOCKED.md` committed → `work_release`, and PR #16 should still be merged on
+its own merits. The lane did not take that path on its own authority because it destroys a correct
+published record on a contested reading.
+
 ---
 
 ## 1. Deliverable: every description meets the standard
