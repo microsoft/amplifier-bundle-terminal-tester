@@ -1,0 +1,327 @@
+# DONE-NOTE — dae2-catalog-terminal-tester
+
+**Repo:** `microsoft/amplifier-bundle-terminal-tester` · **Branch:** `lane/dae2-catalog-terminal-tester`
+**Merge-base:** `fde68aa883ff64b2ee1c94a4b6afa721443ddc55` (`origin/main` at lane start and at push)
+**Work item:** `model_performance-dae2`
+**Date:** 2026-09-07 · **Spend:** **$0.00 of $0.00** — text edits, two `validate-agents` recipe runs,
+one local test run, static byte counts. No API measurement, no DTU, no infrastructure created,
+nothing to tear down.
+
+**LANDING STAGE: this lane is DONE AT THE DRAFT PR.** The lane does not merge; the manager does.
+
+---
+
+## OUTCOME: branch A — RESOLVED
+
+Every deliverable is **DONE**. Nothing was recorded NOT-POSSIBLE. The $0 authority funded the whole
+job because the job is text edits plus recipe runs, which the goal names as inside it. The cap never
+bound.
+
+---
+
+## 1. Deliverable: every description meets the standard
+
+Measured against **CURRENT `origin/main` (`fde68aa`)**, not the census number — see §7 for the
+baseline reconciliation.
+
+| agent | stock chars | lean chars | delta | `<example>` | `<commentary>` |
+|---|---:|---:|---:|---:|---:|
+| `agents/terminal-debugger.md` | 1,270 | **596** | −674 (−53.1%) | 2 → **0** | 0 → 0 |
+| `agents/terminal-operator.md` | 1,109 | **584** | −525 (−47.3%) | 2 → **0** | 0 → 0 |
+| `agents/terminal-visual-tester.md` | 1,222 | **595** | −627 (−51.3%) | 2 → **0** | 0 → 0 |
+| **repo total (3 agents)** | **3,601** | **1,775** | **−1,826 (−50.7%)** | **6 → 0** | **0 → 0** |
+
+All three are **trigger-first** (first clause is `USE WHEN …`), carry an explicit **`DO NOT USE`**
+that names **both sibling agents by name** plus the platform boundary, contain **zero**
+`<example>`/`<commentary>` blocks, and land **inside** the ~600-char budget — 596 / 584 / 595, all
+under `validate-agents` v1.8.0's `DESCRIPTION_HIGH` warn line of 600 chars. No agent needed the
+budget overage the ios-tester lane had to take.
+
+**This is always-on cost.** The delegate catalog is injected into the head of *every turn of every
+session* that composes this bundle, whether or not a terminal agent is ever delegated to.
+−1,826 chars ≈ **−400 tokens/turn** at this program's measured 4.59 chars/token.
+
+**Nothing was edited to produce a diff.** All three were genuinely non-compliant: 6 `<example>`
+blocks, two descriptions over the hard 1,200-char ERROR line, and — the sharper problem — **not one
+of the three said when NOT to use it**, across three sibling agents over the same
+`terminal_inspector` surface. The stock `validate-agents` run raised that collision itself (§4).
+
+**Scope measured, not assumed:** 3 agents is `validate-agents`' own discovery count
+(`candidates_scanned: 3`, `total_count: 3`, `non_agent_count: 0`), not an eyeball count. This repo
+ships **0 skills**, so the skills-visibility surface is out of scope here.
+
+### The lean text, verbatim
+
+**`terminal-operator`** (584):
+
+> USE WHEN a TUI or CLI app must be launched and driven: interact with a terminal application;
+> exercise keyboard navigation, menus, overlays or a command palette; verify keystrokes produce the
+> expected screen change; run an automated test flow. Owns drive-and-verify —
+> spawn/send_keys/screenshot/wait_for_text workflows, screen-dump mode (Ratatui), PTY mode (any
+> terminal app), CLI output verification. DO NOT USE to judge how a screen LOOKS or to sweep terminal
+> sizes (terminal-visual-tester), to root-cause why an interaction broke (terminal-debugger), or for
+> web, Android or iOS UI.
+
+**`terminal-visual-tester`** (595):
+
+> USE WHEN the question about a terminal UI is how it LOOKS or how it reflows: verify layout at
+> different widths (80, 120, 160, 200+ columns); test responsive layout across a range of sizes;
+> compare before/after a code change; detect visual regressions — truncation, overlap, misalignment.
+> Owns layout-and-responsive — multi-size breakpoint sweeps, before/after comparison, visual
+> regression detection, accessibility/readability review. DO NOT USE to drive a flow or verify
+> keystrokes (terminal-operator), to root-cause why an interaction broke (terminal-debugger), or for
+> web, Android or iOS UI.
+
+**`terminal-debugger`** (596):
+
+> USE WHEN a terminal UI "looks wrong" but the code alone cannot explain why: a keystroke does not
+> produce the expected screen change; the UI appears stuck, partially rendered or frozen; an overlay
+> is positioned wrong or missing; a status indicator is not updating; a previously working
+> interaction has stopped. Owns investigate-anomaly — frame-by-frame analysis, keystroke-response
+> verification, render-pipeline tracing, transient/flicker debugging. DO NOT USE to drive a flow or
+> test pass (terminal-operator), to judge layout across sizes (terminal-visual-tester), or for web,
+> Android or iOS UI.
+
+---
+
+## 2. Deliverable: FIDELITY TABLE
+
+Audited fact by fact, **including facts that existed only inside `<example>` blocks**.
+
+### 2a. Facts present in stock and ABSENT in lean
+
+| agent | fact lost | byte delta to restore |
+|---|---|---|
+| — | **NONE** | — |
+
+**Routing facts dropped: 0. Restorations owed: 0.** No intermediate draft lost one either — the
+first draft of each already carried every stock trigger, and the only later edits were length trims
+that removed redundant words (`"against a TUI or CLI app"` after an opening clause that already says
+`"a TUI or CLI app"`; `"different terminal widths"` inside a sentence already scoped to a terminal
+UI), never a fact.
+
+### 2b. Fact-by-fact carry-over
+
+**`terminal-operator`** — every stock fact, and where it is now:
+
+| stock fact | in lean? |
+|---|---|
+| Drives TUI and CLI terminal applications | ✅ `"a TUI or CLI app must be launched and driven"` |
+| launches them | ✅ `"launched"` |
+| sends keystrokes / captures screen state / verifies rendered output | ✅ `"spawn/send_keys/screenshot/wait_for_text workflows"` + `"verify keystrokes produce the expected screen change"` |
+| Launch and interact with a terminal application | ✅ verbatim |
+| Test keyboard navigation, menus, overlays, or command palettes | ✅ verbatim |
+| Verify that keystrokes produce expected screen changes | ✅ verbatim |
+| Run automated test flows against TUI or CLI apps | ✅ `"run an automated test flow"` (the TUI/CLI scope is the opening clause) |
+| Authoritative on drive-and-verify | ✅ `"Owns drive-and-verify"` |
+| spawn/send_keys/screenshot/wait_for_text workflows | ✅ verbatim |
+| screen-dump mode (Ratatui) | ✅ verbatim |
+| PTY mode (any terminal app) | ✅ verbatim |
+| CLI output verification | ✅ verbatim |
+
+**`terminal-visual-tester`**:
+
+| stock fact | in lean? |
+|---|---|
+| Validates terminal UI layout and responsive behavior across multiple sizes | ✅ `"how it LOOKS or how it reflows"` + `"across a range of sizes"` |
+| captures breakpoint sweeps | ✅ `"multi-size breakpoint sweeps"` |
+| detects truncation/overlap/misalignment | ✅ verbatim |
+| produces before/after visual comparisons | ✅ `"compare before/after a code change"` + `"before/after comparison"` |
+| Layout verification at 80, 120, 160, 200+ columns | ✅ verbatim, all four values kept |
+| Before/after visual comparison of a code change | ✅ verbatim |
+| Responsive layout testing across a range of sizes | ✅ verbatim |
+| Detection of visual regressions | ✅ verbatim |
+| Authoritative on layout-and-responsive | ✅ `"Owns layout-and-responsive"` |
+| visual regression detection | ✅ verbatim |
+| accessibility/readability review | ✅ verbatim |
+
+**`terminal-debugger`**:
+
+| stock fact | in lean? |
+|---|---|
+| something "looks wrong" but the code alone cannot explain why | ✅ **promoted to the opening clause** |
+| Investigates visual anomalies and rendering bugs | ✅ `"Owns investigate-anomaly"` |
+| A keystroke does not produce the expected screen change | ✅ verbatim |
+| The UI appears stuck, partially rendered, or frozen | ✅ verbatim |
+| An overlay is positioned wrong or not appearing | ✅ `"positioned wrong or missing"` |
+| Status indicators are not updating | ✅ verbatim |
+| A previously working interaction has stopped working | ✅ `"has stopped"` |
+| frame-by-frame analysis | ✅ verbatim |
+| keystroke-response verification | ✅ verbatim |
+| render-pipeline tracing | ✅ verbatim |
+| transient/flicker debugging | ✅ verbatim |
+
+### 2c. Not carried into lean — deliberate, each named with its reason
+
+None of these is a trigger, a constraint, or a USE WHEN / DO NOT USE WHEN fact.
+
+| what | why not, and where it lives |
+|---|---|
+| The 6 `<example>` bodies | Each is an *illustration of a trigger that is itself preserved* — Tab cycling the amplifier TUI sidebar (→ "keyboard navigation"), `amplifier doctor` (→ "CLI output verification"), a 60–200 column sweep (→ "test responsive layout across a range of sizes"), a sidebar/conversation overlap fix (→ "before/after comparison"), a working indicator that never clears (→ "a status indicator is not updating"), Tab not opening the sidebar (→ "a keystroke does not produce the expected screen change"). **No example carried a fact its own trigger did not.** |
+| `60` as a sweep width | Appears only inside an `<example>`, and contradicts the stock trigger list's own `80, 120, 160, 200+`. The trigger list is kept verbatim; the body's §Phase 2 breakpoint table is the authority on widths. |
+| `Use PROACTIVELY` | Replaced by `USE WHEN`, per the standard. Every natural-language trigger it introduced is preserved. Note `validate-agents` reports MUST/ALWAYS/PROACTIVELY presence as a *metric, not a gate*, and both runs record `has_strong_trigger: true`. |
+| `**Authoritative on:**` prefix | Rendered as `Owns …`, the phrasing already merged in the sibling ios-tester / android-tester lanes of this sweep. The predicate list after it is preserved word-for-word. |
+
+### 2d. Net gain — the lean text carries MORE routing information than stock
+
+Not one stock description stated a **DO NOT USE**, and these three are the hardest sibling set in the
+bundle: all three legitimately answer "test the TUI". A caller reading the stock catalog got three
+entries claiming terminal-application testing with no tiebreaker. All three now route **by name** to
+both siblings on the actual deciding axis — *behaviour* (operator) vs *appearance* (visual-tester) vs
+*unknown cause* (debugger) — plus the platform boundary to `browser-tester` / `android-tester` /
+`ios-tester` territory. The stock `validate-agents` run raised exactly this collision as its
+cross-cutting note; the branch run reports **0 suggestions**.
+
+---
+
+## 3. Deliverable: bodies byte-identical (frontmatter-only change)
+
+md5 of everything after the frontmatter's closing `---`, on `origin/main` **and** on the branch:
+
+| file | body md5 (stock) | body md5 (branch) | body bytes | identical |
+|---|---|---|---:|---|
+| `agents/terminal-debugger.md` | `d9e2ec09970425820980c038aca65214` | `d9e2ec09970425820980c038aca65214` | 8,723 | ✅ |
+| `agents/terminal-operator.md` | `b5d329d1dd9468326c2012f8ba1fee8f` | `b5d329d1dd9468326c2012f8ba1fee8f` | 7,709 | ✅ |
+| `agents/terminal-visual-tester.md` | `5f2265235a7d2429e5f332efff6bec79` | `5f2265235a7d2429e5f332efff6bec79` | 6,864 | ✅ |
+
+Within the frontmatter, **only the `description` value changed**: `meta.name` and `model_role` are
+byte-identical (`[coding, reasoning, general]` / `[coding, general]` / `[critique, general]`), and no
+key was added or removed. Reproduce with `evidence/measure.py <repo>`.
+
+`git diff --stat origin/main` = `3 files changed, 24 insertions(+), 72 deletions(-)` — all inside
+`agents/`.
+
+---
+
+## 4. Deliverable: `validate-agents` on the branch, with the honest transition
+
+Both runs: recipe **v1.8.0**, foundation `@v2.1.2` (`a27d5824517d078097b60d84779dd3eae80202cd`).
+
+| | STOCK (`origin/main` worktree) | BRANCH (`541a6be`) |
+|---|---|---|
+| run id | `run-e9c0134900c4` | `run-7ff76b7380dc` |
+| **verdict** | **❌ FAIL** | **⚠️ PASS WITH WARNINGS** |
+| agents discovered | **3 across 1 location** | **3 across 1 location** |
+| structural summary | `errors 5, passed 0, warnings 4` | `errors 0, passed 3, warnings 3` |
+| quality | 0 good / 0 polish / 0 needs_work / **3 critical** | 0 good / 0 polish / **3 needs_work** / 0 critical |
+| suggestions | 3 | **0** |
+| `example_count` | 2 / 2 / 2 | **0 / 0 / 0** |
+| description chars | 1,270 / 1,109 / 1,222 | **596 / 584 / 595** |
+
+**The transition is FAIL → PASS WITH WARNINGS, not "PASS held", and the goal's "must stay PASS"
+clause has a false premise on this repo** — stock carried 3 × `EXAMPLE_BLOCK_PRESENT` and
+2 × `DESCRIPTION_EXCESSIVE` as structural **ERRORs**. Every ERROR is cleared. This is the third
+independent confirmation in this sweep (after ios-tester and android-tester) that "must stay PASS"
+should read "must clear every structural ERROR".
+
+The branch run's own summary of the residual rating, verbatim:
+
+> The `needs_work` rating on all three agents traces to a **single warning code repeated three times
+> — `NO_TOOLS_SECTION`**. Zero description defects were found.
+
+---
+
+## 5. `NO_TOOLS_SECTION` × 3: acknowledged and declined, not fixed
+
+**Identical on stock and branch** — this lane neither introduced nor removed it.
+
+Evidence for leaving it, all verified in-repo rather than assumed:
+
+1. The tool **is** declared, with its config, at `behaviors/terminal-tester.yaml:9-25`, in the same
+   file that includes all three agents by name. The validator's own remediation text permits
+   *"in frontmatter **or bundle.yaml**"*.
+2. `tools:` on an agent is **additive, never restrictive** — verified verbatim at
+   `amplifier-foundation/modules/tool-delegate/amplifier_module_tool_delegate/__init__.py:1513`
+   (`_merge_tools`): *"Exclusions apply to INHERITANCE only. Explicit declarations from agent are
+   ALWAYS honored."* Its one functional effect is overriding `exclude_tools` (default
+   `[tool-delegate]`). **None of these three agents calls `delegate`**, so none is arriving crippled.
+   P3 hygiene, not P0.
+3. `tools:` is **config, not catalog text** — it moves **0 bytes** of the per-turn cost this lane
+   exists to reduce.
+4. Adding it is a *functional* change riding in a text-only diff, unverifiable at $0 (it needs a real
+   spawn), and it would make this bundle the sole outlier among the four sibling tester bundles —
+   **0 of 12** agents across android / browser / terminal / ios declare agent-level `tools:`.
+
+Disposition: **recorded as a known benign warning; deliberately not edited.**
+
+---
+
+## 6. Deliverable: tests and CI
+
+- **Tests: `modules/tool-terminal-inspector` — 94 passed, 0 failed** on the branch
+  (`uv run --extra dev pytest tests/ -q`). Same 94 the merge-base commit `fde68aa` recorded, so the
+  change is test-neutral.
+- **No test in this repo asserts anything about agent descriptions.** Checked, not assumed: the only
+  `description` match under `tests/` is `conftest.py:26`, a stub `def description()` on a fake *tool*
+  object, and there are **zero** assertions requiring `<example>` blocks to be present — the
+  inverted-test hazard that bit `dot-graph` in this sweep does not exist here.
+- **CI: this repo owns none.** `.github/` does not exist and `git ls-files` matches 0 paths under it.
+  Any check appearing on the PR is org-level (e.g. `license/cla`); its state is quoted in the PR body
+  at push time. Local test results above are local runs, not CI results.
+
+---
+
+## 7. Baseline reconciliation — the census number vs measured `origin/main`
+
+The item and goal name **~3,725 ch**. Measured on current `origin/main` (`fde68aa`): **3,601 chars**
+of description across 3 agents. The gap is **not** drift in the sense that bit a sibling lane — it is
+a units difference, and it reconciles:
+
+- 3,601 (description text) + ~122 (the three rendered catalog line prefixes
+  `"  - terminal-tester:<agent>: "`, 39 + 39 + 44) ≈ **3,723**, i.e. the census measured **rendered
+  catalog entries**, this note measures **description values**.
+- Real upstream drift also exists and is accounted for separately: `fde68aa` (PR #15, merged after
+  the sweep was scoped) removed the `<commentary>` blocks, taking the same three descriptions from
+  **4,224 → 3,601** chars. That is why `commentary_count` is already 0 in the stock run while the
+  ios-tester lane found 9.
+
+**All numbers in this note are measured against `fde68aa`, the branch's actual merge-base.**
+
+---
+
+## 8. Decisions recorded (no human was waited on)
+
+1. **Held `model_performance-dae2` directly rather than filing a per-repo child.** `work_claim` on it
+   **succeeded** — the goal's child-item recovery path is conditioned on a *refusal*, and there was
+   none. The resolution text names this repo's slice and the five repos still uncovered, exactly as
+   `x99c` did when it spawned this item. §10.
+2. **All three land ≤600 chars.** No fidelity trade was needed to get there, so none was taken. Where
+   a further trim would have cost a fact, the fact wins — that case did not arise.
+3. **`NO_TOOLS_SECTION` × 3 accepted, not remediated.** §5.
+4. **Two `validate-agents` runs, not one.** The goal requires the branch verdict; the stock run is
+   what makes "FAIL → PASS WITH WARNINGS" checkable rather than asserted. Both are $0.
+5. **No catalog render performed.** The goal's deliverable list asks for char counts, not a rendered
+   catalog, and the census-safety rule forbids running `amplifier` against a scratch
+   `AMPLIFIER_HOME`. Description chars are the thing the catalog is built from; §7 shows the
+   constant offset.
+
+---
+
+## 9. Observations worth their own item (found, not fixed)
+
+1. **A claim from the branch run's tool-access analysis is REFUTED, and is recorded rather than
+   propagated.** It asserted that a bare-string `tools: [terminal_inspector]` is *"live today in
+   `reality-check:terminal-tester.md`"* and would `AttributeError` at spawn. Checked directly: that
+   file uses the correct mount-plan form (`tools:` → `- module: tool-terminal-inspector`), as does
+   `reality-check:browser-tester.md` (`- module: tool-delegate`). **No such bug exists there.** The
+   underlying shape constraint (mount-plan dicts, not bare strings) is real and worth knowing; the
+   named victim is not. No item filed.
+2. **`validate-agents` false-negatives on behavior-level tool declarations** — it checks for the
+   `tools:` *key in agent frontmatter only*, not validity or location, so a correct
+   `behaviors/*.yaml` declaration reads as missing. Same polarity the ios-tester and
+   infographic-builder lanes recorded; this is a further instance, not a new finding.
+
+---
+
+## 10. Evidence index
+
+```
+docs/lanes/dae2-catalog-terminal-tester/
+├── DONE-NOTE.md                     (this file)
+└── evidence/
+    ├── measure.py                   reproduce every byte count at $0, no LLM call
+    ├── descriptions-STOCK.json      per-agent desc chars, md5, example counts, body md5 @ fde68aa
+    ├── descriptions-BRANCH.json     the same fields on the branch
+    ├── validate-agents-STOCK.md     FAIL, 5 errors, verdict + coverage quoted verbatim
+    └── validate-agents-BRANCH.md    PASS WITH WARNINGS, 0 errors, verdict + coverage verbatim
+```
